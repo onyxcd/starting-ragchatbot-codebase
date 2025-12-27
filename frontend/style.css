@@ -245,6 +245,28 @@ header h1 {
     color: var(--text-secondary);
 }
 
+/* Source Link Styles */
+.source-link {
+    color: #60a5fa;
+    text-decoration: none;
+    border-bottom: 1px solid #60a5fa;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.source-link:hover {
+    color: #93c5fd;
+    border-bottom-color: #93c5fd;
+}
+
+.source-link:visited {
+    color: #c084fc;
+    border-bottom-color: #c084fc;
+}
+
+.source-item {
+    color: var(--text-secondary);
+}
+
 /* Markdown formatting styles */
 .message-content h1,
 .message-content h2,
@@ -632,6 +654,46 @@ details[open] .suggested-header::before {
     border-color: var(--primary-color);
     color: var(--primary-color);
     transform: translateX(2px);
+}
+
+/* New Chat Button */
+.new-chat-button {
+    padding: 0.5rem 0;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    text-align: left;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.new-chat-button .button-icon {
+    font-size: 0.75rem;
+    line-height: 1;
+    font-weight: 400;
+}
+
+.new-chat-button:focus {
+    outline: none;
+    color: var(--primary-color);
+}
+
+.new-chat-button:hover {
+    color: var(--primary-color);
+}
+
+.new-chat-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Responsive Design */
