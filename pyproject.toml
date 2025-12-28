@@ -22,3 +22,45 @@ dev = [
     "pytest-mock>=3.14.0",
     "httpx>=0.28.1",
 ]
+
+[tool.pytest.ini_options]
+# Test discovery patterns
+testpaths = ["backend/tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Output options
+addopts = [
+    "-v",                        # Verbose output
+    "--tb=short",                # Shorter traceback format
+    "--strict-markers",          # Raise error on unknown markers
+    "--disable-warnings",        # Disable warnings in output
+    "-ra",                       # Show summary of all test outcomes
+]
+
+# Asyncio configuration
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+# Coverage options (optional, uncomment to enable)
+# addopts = [
+#     "--cov=backend",
+#     "--cov-report=term-missing",
+#     "--cov-report=html",
+# ]
+
+# Markers for categorizing tests
+markers = [
+    "unit: Unit tests that test individual components in isolation",
+    "integration: Integration tests that test component interactions",
+    "slow: Tests that take a long time to run",
+    "diagnostics: Diagnostic tests for debugging system state",
+]
+
+# Ignore specific warnings
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore:resource_tracker.*:UserWarning",
+]

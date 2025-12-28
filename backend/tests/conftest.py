@@ -157,3 +157,97 @@ def rag_system(test_config: Config, mock_anthropic_client) -> RAGSystem:
 def session_manager() -> SessionManager:
     """SessionManager instance"""
     return SessionManager(max_history=2)
+
+
+@pytest.fixture(scope="function")
+def test_app(test_config: Config, mock_anthropic_client):
+    """FastAPI test app without static file mounting to avoid file existence issues"""
+    from fastapi import FastAPI, HTTPException
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.middleware.trustedhost import TrustedHostMiddleware
+    from pydantic import BaseModel
+    from typing import List, Optional, Dict
+    import anthropic
+
+    # Initialize test FastAPI app
+    app = FastAPI(title="Course Materials RAG System (Test)", root_path="")
+
+    # Add middleware
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["*"]
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
+
+    # Initialize test RAG system
+    test_rag_system = RAGSystem(test_config)
+
+    # Define request/response models (same as in app.py)
+    class QueryRequest(BaseModel):
+        query: str
+        session_id: Optional[str] = None
+
+    class QueryResponse(BaseModel):
+        answer: str
+        sources: List[Dict[str, Optional[str]]]
+        session_id: str
+
+    class CourseStats(BaseModel):
+        total_courses: int
+        course_titles: List[str]
+
+    # Define API endpoints
+    @app.post("/api/query", response_model=QueryResponse)
+    async def query_documents(request: QueryRequest):
+        try:
+            session_id = request.session_id
+            if not session_id:
+                session_id = test_rag_system.session_manager.create_session()
+
+            answer, sources = test_rag_system.query(request.query, session_id)
+
+            return QueryResponse(
+                answer=answer,
+                sources=sources,
+                session_id=session_id
+            )
+        except anthropic.AuthenticationError as e:
+            raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
+        except anthropic.RateLimitError as e:
+            raise HTTPException(status_code=500, detail=f"Rate limit exceeded: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/courses", response_model=CourseStats)
+    async def get_course_stats():
+        try:
+            analytics = test_rag_system.get_course_analytics()
+            return CourseStats(
+                total_courses=analytics["total_courses"],
+                course_titles=analytics["course_titles"]
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/")
+    async def root():
+        return {"message": "Test API is running"}
+
+    # Attach rag_system for test patching
+    app.state.rag_system = test_rag_system
+
+    return app
+
+
+@pytest.fixture(scope="function")
+def test_client(test_app):
+    """FastAPI test client using the test app"""
+    from fastapi.testclient import TestClient
+    return TestClient(test_app)
