@@ -1,16 +1,16 @@
 """Diagnostic tests to verify environment configuration"""
 
-import pytest
 import os
+
 from config import Config
 
 
 def test_api_key_is_set():
     """CRITICAL: Verify ANTHROPIC_API_KEY is configured in environment"""
     config = Config()
-    assert config.ANTHROPIC_API_KEY is not None, (
-        "ANTHROPIC_API_KEY is None. Check that .env file exists and contains the key."
-    )
+    assert (
+        config.ANTHROPIC_API_KEY is not None
+    ), "ANTHROPIC_API_KEY is None. Check that .env file exists and contains the key."
 
 
 def test_api_key_not_empty():

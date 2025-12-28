@@ -1,8 +1,7 @@
 """Unit tests for AIGenerator tool calling - Requirement #2"""
 
-import pytest
-from unittest.mock import MagicMock, Mock
-import anthropic
+from unittest.mock import MagicMock
+
 from ai_generator import AIGenerator
 
 
@@ -17,26 +16,28 @@ def test_generate_response_without_tools(ai_generator, mock_anthropic_client):
     mock_anthropic_client.messages.create.assert_called_once()
 
 
-def test_generate_response_with_tools_available(ai_generator, tool_manager, mock_anthropic_client):
+def test_generate_response_with_tools_available(
+    ai_generator, tool_manager, mock_anthropic_client
+):
     """Test that tools are passed to the API when provided"""
     # Get tool definitions
     tools = tool_manager.get_tool_definitions()
 
     # Call with tools
     ai_generator.generate_response(
-        query="What is machine learning?",
-        tools=tools,
-        tool_manager=tool_manager
+        query="What is machine learning?", tools=tools, tool_manager=tool_manager
     )
 
     # Check that tools were passed in the API call
     call_args = mock_anthropic_client.messages.create.call_args
     assert call_args is not None
-    assert 'tools' in call_args.kwargs
-    assert 'tool_choice' in call_args.kwargs
+    assert "tools" in call_args.kwargs
+    assert "tool_choice" in call_args.kwargs
 
 
-def test_generate_response_calls_search_tool(ai_generator, tool_manager, mock_anthropic_client, monkeypatch):
+def test_generate_response_calls_search_tool(
+    ai_generator, tool_manager, mock_anthropic_client, monkeypatch
+):
     """CRITICAL: Test that Claude correctly calls CourseSearchTool"""
     # Mock tool use response
     tool_block = MagicMock()
@@ -60,13 +61,16 @@ def test_generate_response_calls_search_tool(ai_generator, tool_manager, mock_an
     second_response.stop_reason = "end_turn"
 
     # Set up mock to return different responses
-    mock_anthropic_client.messages.create.side_effect = [first_response, second_response]
+    mock_anthropic_client.messages.create.side_effect = [
+        first_response,
+        second_response,
+    ]
 
     # Call generate_response
     response = ai_generator.generate_response(
         query="What is ML?",
         tools=tool_manager.get_tool_definitions(),
-        tool_manager=tool_manager
+        tool_manager=tool_manager,
     )
 
     # Should return the final answer
@@ -113,14 +117,14 @@ def test_sequential_tool_calling(ai_generator, tool_manager, mock_anthropic_clie
     mock_anthropic_client.messages.create.side_effect = [
         first_response,
         second_response,
-        third_response
+        third_response,
     ]
 
     # Execute
     response = ai_generator.generate_response(
         query="Compare topics across Course A and Course B",
         tools=tool_manager.get_tool_definitions(),
-        tool_manager=tool_manager
+        tool_manager=tool_manager,
     )
 
     # Assertions
@@ -133,16 +137,19 @@ def test_sequential_tool_calling(ai_generator, tool_manager, mock_anthropic_clie
     call_3_kwargs = mock_anthropic_client.messages.create.call_args_list[2].kwargs
 
     # First two calls should have tools
-    assert 'tools' in call_1_kwargs
-    assert 'tools' in call_2_kwargs
+    assert "tools" in call_1_kwargs
+    assert "tools" in call_2_kwargs
     # Third call is forced final response after max rounds, should NOT have tools
-    assert 'tools' not in call_3_kwargs
+    assert "tools" not in call_3_kwargs
 
 
-def test_max_rounds_enforcement(ai_generator, tool_manager, mock_anthropic_client, monkeypatch):
+def test_max_rounds_enforcement(
+    ai_generator, tool_manager, mock_anthropic_client, monkeypatch
+):
     """Test that system enforces MAX_TOOL_ROUNDS limit"""
     # Mock config to ensure max rounds is 2
     from config import config
+
     original_max = config.MAX_TOOL_ROUNDS
     config.MAX_TOOL_ROUNDS = 2
 
@@ -171,14 +178,14 @@ def test_max_rounds_enforcement(ai_generator, tool_manager, mock_anthropic_clien
         mock_anthropic_client.messages.create.side_effect = [
             tool_response,  # Round 1
             tool_response,  # Round 2
-            final_response  # Final (max hit, no tools)
+            final_response,  # Final (max hit, no tools)
         ]
 
         # Execute
         response = ai_generator.generate_response(
             query="Test",
             tools=tool_manager.get_tool_definitions(),
-            tool_manager=tool_manager
+            tool_manager=tool_manager,
         )
 
         # Should return forced response
@@ -186,15 +193,19 @@ def test_max_rounds_enforcement(ai_generator, tool_manager, mock_anthropic_clien
         assert mock_anthropic_client.messages.create.call_count == 3
 
         # Third call should NOT have tools
-        third_call_kwargs = mock_anthropic_client.messages.create.call_args_list[2].kwargs
-        assert 'tools' not in third_call_kwargs
+        third_call_kwargs = mock_anthropic_client.messages.create.call_args_list[
+            2
+        ].kwargs
+        assert "tools" not in third_call_kwargs
 
     finally:
         # Restore original config
         config.MAX_TOOL_ROUNDS = original_max
 
 
-def test_tool_execution_error_handling(ai_generator, tool_manager, mock_anthropic_client, monkeypatch):
+def test_tool_execution_error_handling(
+    ai_generator, tool_manager, mock_anthropic_client, monkeypatch
+):
     """Test that tool execution errors are passed back to Claude"""
     # First round: tool call
     tool_block = MagicMock()
@@ -216,7 +227,10 @@ def test_tool_execution_error_handling(ai_generator, tool_manager, mock_anthropi
     second_response.content = [final_block]
     second_response.stop_reason = "end_turn"
 
-    mock_anthropic_client.messages.create.side_effect = [first_response, second_response]
+    mock_anthropic_client.messages.create.side_effect = [
+        first_response,
+        second_response,
+    ]
 
     # Make tool execution fail
     def failing_execute(tool_name, **kwargs):
@@ -228,20 +242,24 @@ def test_tool_execution_error_handling(ai_generator, tool_manager, mock_anthropi
     response = ai_generator.generate_response(
         query="Test",
         tools=tool_manager.get_tool_definitions(),
-        tool_manager=tool_manager
+        tool_manager=tool_manager,
     )
 
     # Should return Claude's response to the error
     assert response == "I encountered an error"
 
     # Check second call received error message
-    second_call_messages = mock_anthropic_client.messages.create.call_args_list[1].kwargs['messages']
-    tool_result_content = second_call_messages[-1]['content'][0]
-    assert "Error executing tool" in tool_result_content['content']
-    assert tool_result_content.get('is_error') == True
+    second_call_messages = mock_anthropic_client.messages.create.call_args_list[
+        1
+    ].kwargs["messages"]
+    tool_result_content = second_call_messages[-1]["content"][0]
+    assert "Error executing tool" in tool_result_content["content"]
+    assert tool_result_content.get("is_error")
 
 
-def test_early_termination_on_direct_answer(ai_generator, tool_manager, mock_anthropic_client):
+def test_early_termination_on_direct_answer(
+    ai_generator, tool_manager, mock_anthropic_client
+):
     """Test that loop exits immediately if Claude doesn't use tools"""
     # Mock direct response without tool use
     text_block = MagicMock()
@@ -258,7 +276,7 @@ def test_early_termination_on_direct_answer(ai_generator, tool_manager, mock_ant
     result = ai_generator.generate_response(
         query="What is 2+2?",
         tools=tool_manager.get_tool_definitions(),
-        tool_manager=tool_manager
+        tool_manager=tool_manager,
     )
 
     # Should return direct answer
@@ -268,7 +286,9 @@ def test_early_termination_on_direct_answer(ai_generator, tool_manager, mock_ant
     assert mock_anthropic_client.messages.create.call_count == 1
 
 
-def test_tools_available_in_each_round(ai_generator, tool_manager, mock_anthropic_client):
+def test_tools_available_in_each_round(
+    ai_generator, tool_manager, mock_anthropic_client
+):
     """Test that tools parameter is passed in each round"""
     # Two rounds of tool use
     tool_block = MagicMock()
@@ -289,27 +309,26 @@ def test_tools_available_in_each_round(ai_generator, tool_manager, mock_anthropi
     final_response.content = [final_block]
     final_response.stop_reason = "end_turn"
 
-    mock_anthropic_client.messages.create.side_effect = [
-        tool_response,
-        final_response
-    ]
+    mock_anthropic_client.messages.create.side_effect = [tool_response, final_response]
 
     # Execute
     ai_generator.generate_response(
         query="Test",
         tools=tool_manager.get_tool_definitions(),
-        tool_manager=tool_manager
+        tool_manager=tool_manager,
     )
 
     # Both calls should have tools parameter
     first_call_kwargs = mock_anthropic_client.messages.create.call_args_list[0].kwargs
     second_call_kwargs = mock_anthropic_client.messages.create.call_args_list[1].kwargs
 
-    assert 'tools' in first_call_kwargs
-    assert 'tools' in second_call_kwargs
+    assert "tools" in first_call_kwargs
+    assert "tools" in second_call_kwargs
 
 
-def test_tool_result_propagation(ai_generator, tool_manager, populated_vector_store, mock_anthropic_client):
+def test_tool_result_propagation(
+    ai_generator, tool_manager, populated_vector_store, mock_anthropic_client
+):
     """Test that tool results are properly propagated back to Claude"""
     # Mock tool use for search
     tool_block = MagicMock()
@@ -330,26 +349,29 @@ def test_tool_result_propagation(ai_generator, tool_manager, populated_vector_st
     second_response = MagicMock()
     second_response.content = [final_text_block]
 
-    mock_anthropic_client.messages.create.side_effect = [first_response, second_response]
+    mock_anthropic_client.messages.create.side_effect = [
+        first_response,
+        second_response,
+    ]
 
     # Execute
-    response = ai_generator.generate_response(
+    _response = ai_generator.generate_response(
         query="What is ML?",
         tools=tool_manager.get_tool_definitions(),
-        tool_manager=tool_manager
+        tool_manager=tool_manager,
     )
 
     # Check that second API call includes tool results
     second_call_args = mock_anthropic_client.messages.create.call_args_list[1]
-    messages = second_call_args.kwargs['messages']
+    messages = second_call_args.kwargs["messages"]
 
     # Should have user message, assistant tool use, and user tool result
     assert len(messages) >= 2
 
     # Last message should be tool results
     last_message = messages[-1]
-    assert last_message['role'] == 'user'
-    assert isinstance(last_message['content'], list)
+    assert last_message["role"] == "user"
+    assert isinstance(last_message["content"], list)
 
 
 def test_missing_api_key_raises_error():
@@ -366,14 +388,11 @@ def test_system_prompt_includes_history(ai_generator, mock_anthropic_client):
     """Test that conversation history is included in system prompt"""
     history = "User: Previous question\nAssistant: Previous answer"
 
-    ai_generator.generate_response(
-        query="New question",
-        conversation_history=history
-    )
+    ai_generator.generate_response(query="New question", conversation_history=history)
 
     # Check that system prompt includes history
     call_args = mock_anthropic_client.messages.create.call_args
-    system_prompt = call_args.kwargs['system']
+    system_prompt = call_args.kwargs["system"]
 
     assert "Previous conversation" in system_prompt
     assert "Previous question" in system_prompt
@@ -406,13 +425,16 @@ def test_multiple_tool_calls(ai_generator, tool_manager, mock_anthropic_client):
     second_response = MagicMock()
     second_response.content = [final_text_block]
 
-    mock_anthropic_client.messages.create.side_effect = [first_response, second_response]
+    mock_anthropic_client.messages.create.side_effect = [
+        first_response,
+        second_response,
+    ]
 
     # Execute
     response = ai_generator.generate_response(
         query="Tell me about ML",
         tools=tool_manager.get_tool_definitions(),
-        tool_manager=tool_manager
+        tool_manager=tool_manager,
     )
 
     # Should handle both tool calls
@@ -424,18 +446,20 @@ def test_base_params_configuration(test_config, mock_anthropic_client):
     generator = AIGenerator(test_config.ANTHROPIC_API_KEY, test_config.ANTHROPIC_MODEL)
 
     # Check base params
-    assert generator.base_params['model'] == test_config.ANTHROPIC_MODEL
-    assert generator.base_params['temperature'] == 0
-    assert generator.base_params['max_tokens'] == 800
+    assert generator.base_params["model"] == test_config.ANTHROPIC_MODEL
+    assert generator.base_params["temperature"] == 0
+    assert generator.base_params["max_tokens"] == 800
 
 
-def test_generate_response_without_conversation_history(ai_generator, mock_anthropic_client):
+def test_generate_response_without_conversation_history(
+    ai_generator, mock_anthropic_client
+):
     """Test response generation without conversation history"""
     ai_generator.generate_response(query="What is AI?")
 
     # System prompt should not include "Previous conversation"
     call_args = mock_anthropic_client.messages.create.call_args
-    system_prompt = call_args.kwargs['system']
+    system_prompt = call_args.kwargs["system"]
 
     # Should contain base system prompt but not history section
     assert "Previous conversation" not in system_prompt or "None" in system_prompt

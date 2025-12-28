@@ -1,9 +1,10 @@
 """Diagnostic tests to verify ChromaDB state and data availability"""
 
-import pytest
 import os
-from vector_store import VectorStore
+
+import pytest
 from config import Config
+from vector_store import VectorStore
 
 
 def test_chromadb_path_exists():
@@ -56,7 +57,7 @@ def test_chromadb_has_content_chunks():
 
     try:
         results = store.course_content.get()
-        chunk_count = len(results['ids']) if results and 'ids' in results else 0
+        chunk_count = len(results["ids"]) if results and "ids" in results else 0
 
         assert chunk_count > 0, (
             f"ChromaDB has no content chunks. Found {chunk_count} chunks.\n"
@@ -88,9 +89,9 @@ def test_vector_store_search_functional(populated_vector_store):
 
     # Should return results or empty, but not error
     assert results is not None
-    assert hasattr(results, 'documents')
-    assert hasattr(results, 'metadata')
-    assert hasattr(results, 'error')
+    assert hasattr(results, "documents")
+    assert hasattr(results, "metadata")
+    assert hasattr(results, "error")
 
     # With our test data, should find results
     assert not results.is_empty(), "Search returned no results with test data"

@@ -30,6 +30,29 @@ uv run uvicorn app:app --reload --port 8000
 
 The application serves at `http://localhost:8000` with API docs at `http://localhost:8000/docs`.
 
+### Code Quality Tools
+```bash
+# Auto-format code with Black and Ruff
+./format.sh
+
+# Run all quality checks (formatting, linting, type checking, tests)
+./quality.sh
+
+# Individual tools
+uv run black backend/                    # Format code
+uv run ruff check backend/ --fix         # Lint and auto-fix
+uv run mypy backend/                     # Type checking
+uv run pytest backend/tests/             # Run tests
+```
+
+**Quality Tools Configured:**
+- **Black** - Code formatter (line length: 88, Python 3.13+)
+- **Ruff** - Fast Python linter (includes isort, pyflakes, pycodestyle, etc.)
+- **mypy** - Static type checker
+- **pytest** - Testing framework with coverage reporting
+
+All tools are configured in `pyproject.toml` with consistent settings.
+
 ## Architecture
 
 ### Component Flow

@@ -1,30 +1,30 @@
 """Shared test fixtures for the RAG chatbot test suite"""
 
-import pytest
-import tempfile
 import shutil
-from pathlib import Path
-from typing import Generator
-from unittest.mock import Mock, MagicMock
-import anthropic
 import sys
-import os
+import tempfile
+from collections.abc import Generator
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import anthropic
+import pytest
 
 # Add backend directory to path so we can import modules
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from vector_store import VectorStore, SearchResults
-from search_tools import CourseSearchTool, CourseOutlineTool, ToolManager
-from ai_generator import AIGenerator
-from session_manager import SessionManager
-from rag_system import RAGSystem
-from models import Course, Lesson, CourseChunk
-from config import Config
+from ai_generator import AIGenerator  # noqa: E402
+from config import Config  # noqa: E402
+from models import Course, CourseChunk, Lesson  # noqa: E402
+from rag_system import RAGSystem  # noqa: E402
+from search_tools import CourseOutlineTool, CourseSearchTool, ToolManager  # noqa: E402
+from session_manager import SessionManager  # noqa: E402
+from vector_store import VectorStore  # noqa: E402
 
 
 @pytest.fixture(scope="function")
-def temp_chroma_dir() -> Generator[str, None, None]:
+def temp_chroma_dir() -> Generator[str]:
     """Create temporary ChromaDB directory for testing"""
     temp_dir = tempfile.mkdtemp()
     yield temp_dir
@@ -45,9 +45,7 @@ def test_config(temp_chroma_dir: str) -> Config:
 def vector_store(temp_chroma_dir: str) -> VectorStore:
     """Clean VectorStore instance for testing"""
     return VectorStore(
-        chroma_path=temp_chroma_dir,
-        embedding_model="all-MiniLM-L6-v2",
-        max_results=3
+        chroma_path=temp_chroma_dir, embedding_model="all-MiniLM-L6-v2", max_results=3
     )
 
 
@@ -59,10 +57,22 @@ def sample_course() -> Course:
         instructor="Dr. Smith",
         course_link="https://example.com/ml-course",
         lessons=[
-            Lesson(lesson_number=1, title="What is ML?", lesson_link="https://example.com/ml-lesson1"),
-            Lesson(lesson_number=2, title="Supervised Learning", lesson_link="https://example.com/ml-lesson2"),
-            Lesson(lesson_number=3, title="Neural Networks", lesson_link="https://example.com/ml-lesson3"),
-        ]
+            Lesson(
+                lesson_number=1,
+                title="What is ML?",
+                lesson_link="https://example.com/ml-lesson1",
+            ),
+            Lesson(
+                lesson_number=2,
+                title="Supervised Learning",
+                lesson_link="https://example.com/ml-lesson2",
+            ),
+            Lesson(
+                lesson_number=3,
+                title="Neural Networks",
+                lesson_link="https://example.com/ml-lesson3",
+            ),
+        ],
     )
 
 
@@ -74,25 +84,27 @@ def sample_chunks(sample_course: Course) -> list[CourseChunk]:
             content="Machine learning is a subset of artificial intelligence focused on data-driven algorithms.",
             course_title=sample_course.title,
             lesson_number=1,
-            chunk_index=0
+            chunk_index=0,
         ),
         CourseChunk(
             content="Supervised learning uses labeled training data to learn patterns and make predictions.",
             course_title=sample_course.title,
             lesson_number=2,
-            chunk_index=1
+            chunk_index=1,
         ),
         CourseChunk(
             content="Neural networks are computational models inspired by biological neural networks.",
             course_title=sample_course.title,
             lesson_number=3,
-            chunk_index=2
+            chunk_index=2,
         ),
     ]
 
 
 @pytest.fixture(scope="function")
-def populated_vector_store(vector_store: VectorStore, sample_course: Course, sample_chunks: list[CourseChunk]) -> VectorStore:
+def populated_vector_store(
+    vector_store: VectorStore, sample_course: Course, sample_chunks: list[CourseChunk]
+) -> VectorStore:
     """VectorStore with sample data loaded"""
     vector_store.add_course_metadata(sample_course)
     vector_store.add_course_content(sample_chunks)
@@ -112,7 +124,9 @@ def course_outline_tool(populated_vector_store: VectorStore) -> CourseOutlineToo
 
 
 @pytest.fixture(scope="function")
-def tool_manager(course_search_tool: CourseSearchTool, course_outline_tool: CourseOutlineTool) -> ToolManager:
+def tool_manager(
+    course_search_tool: CourseSearchTool, course_outline_tool: CourseOutlineTool
+) -> ToolManager:
     """ToolManager with both tools registered"""
     manager = ToolManager()
     manager.register_tool(course_search_tool)
