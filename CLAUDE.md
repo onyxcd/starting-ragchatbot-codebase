@@ -46,7 +46,7 @@ User Query → FastAPI → RAGSystem → AIGenerator (Claude API)
                               VectorStore searches ChromaDB
                                          ↓
                               Results back to Claude
-                                         ↓
+                                     ↓
                               Claude synthesizes answer
                                          ↓
                               Response + Sources → User

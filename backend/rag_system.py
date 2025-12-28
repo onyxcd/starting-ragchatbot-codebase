@@ -12,7 +12,23 @@ class RAGSystem:
     
     def __init__(self, config):
         self.config = config
-        
+
+        # Validate critical configuration
+        if not config.ANTHROPIC_API_KEY or config.ANTHROPIC_API_KEY == "":
+            raise ValueError(
+                "ANTHROPIC_API_KEY not configured. "
+                "Please add your Anthropic API key to the .env file:\n"
+                "ANTHROPIC_API_KEY=sk-ant-your-actual-key\n"
+                "Get your API key from: https://console.anthropic.com/"
+            )
+
+        # Warn if using placeholder key
+        if "PLACEHOLDER" in config.ANTHROPIC_API_KEY or "your-actual-key" in config.ANTHROPIC_API_KEY.lower():
+            raise ValueError(
+                "ANTHROPIC_API_KEY appears to be a placeholder. "
+                "Please replace it with your actual API key from https://console.anthropic.com/"
+            )
+
         # Initialize core components
         self.document_processor = DocumentProcessor(config.CHUNK_SIZE, config.CHUNK_OVERLAP)
         self.vector_store = VectorStore(config.CHROMA_PATH, config.EMBEDDING_MODEL, config.MAX_RESULTS)

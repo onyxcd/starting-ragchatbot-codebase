@@ -8,6 +8,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 import os
+import anthropic
 
 from config import config
 from rag_system import RAGSystem
@@ -51,6 +52,9 @@ class CourseStats(BaseModel):
     total_courses: int
     course_titles: List[str]
 
+# Alias for backwards compatibility with tests
+CourseAnalytics = CourseStats
+
 # API Endpoints
 
 @app.post("/api/query", response_model=QueryResponse)
@@ -61,15 +65,19 @@ async def query_documents(request: QueryRequest):
         session_id = request.session_id
         if not session_id:
             session_id = rag_system.session_manager.create_session()
-        
+
         # Process query using RAG system
         answer, sources = rag_system.query(request.query, session_id)
-        
+
         return QueryResponse(
             answer=answer,
             sources=sources,
             session_id=session_id
         )
+    except anthropic.AuthenticationError as e:
+        raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
+    except anthropic.RateLimitError as e:
+        raise HTTPException(status_code=500, detail=f"Rate limit exceeded: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

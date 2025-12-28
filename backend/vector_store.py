@@ -88,14 +88,34 @@ class VectorStore:
         # Step 3: Search course content
         # Use provided limit or fall back to configured max_results
         search_limit = limit if limit is not None else self.max_results
-        
+
         try:
             results = self.course_content.query(
                 query_texts=[query],
                 n_results=search_limit,
                 where=filter_dict
             )
-            return SearchResults.from_chroma(results)
+
+            # Filter results by similarity threshold
+            search_results = SearchResults.from_chroma(results)
+
+            # Only keep results with distance < 1.5 (reasonably similar)
+            # ChromaDB uses cosine distance where 0 is perfect match, 2 is opposite
+            filtered_docs = []
+            filtered_meta = []
+            filtered_dist = []
+
+            for doc, meta, dist in zip(search_results.documents, search_results.metadata, search_results.distances):
+                if dist < 1.5:  # Similarity threshold
+                    filtered_docs.append(doc)
+                    filtered_meta.append(meta)
+                    filtered_dist.append(dist)
+
+            return SearchResults(
+                documents=filtered_docs,
+                metadata=filtered_meta,
+                distances=filtered_dist
+            )
         except Exception as e:
             return SearchResults.empty(f"Search error: {str(e)}")
     
@@ -106,13 +126,17 @@ class VectorStore:
                 query_texts=[course_name],
                 n_results=1
             )
-            
+
             if results['documents'][0] and results['metadatas'][0]:
-                # Return the title (which is now the ID)
-                return results['metadatas'][0][0]['title']
+                # Check similarity threshold (distance < 1.45 for reasonable match)
+                # ChromaDB uses cosine distance where 0 is perfect match, 2 is opposite
+                # 1.45 allows for fuzzy matching like "Machine" -> "Introduction to Machine Learning"
+                distance = results['distances'][0][0] if results['distances'][0] else float('inf')
+                if distance < 1.45:  # Only accept reasonably similar courses
+                    return results['metadatas'][0][0]['title']
         except Exception as e:
             print(f"Error resolving course name: {e}")
-        
+
         return None
     
     def _build_filter(self, course_title: Optional[str], lesson_number: Optional[int]) -> Optional[Dict]:
