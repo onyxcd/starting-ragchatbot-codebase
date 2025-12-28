@@ -1,7 +1,8 @@
 """Integration tests for RAG system query handling - Requirement #3"""
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from rag_system import RAGSystem
 
 
@@ -77,7 +78,9 @@ def test_query_with_session_history(rag_system):
     assert "Tell me more" in history
 
 
-def test_query_sources_returned(rag_system, sample_course, sample_chunks, mock_anthropic_client):
+def test_query_sources_returned(
+    rag_system, sample_course, sample_chunks, mock_anthropic_client
+):
     """Test that sources are properly returned from queries"""
     # Add test data
     rag_system.vector_store.add_course_metadata(sample_course)
@@ -107,7 +110,10 @@ def test_query_sources_returned(rag_system, sample_course, sample_chunks, mock_a
     second_response = MagicMock()
     second_response.content = [final_text_block]
 
-    mock_anthropic_client.messages.create.side_effect = [first_response, second_response]
+    mock_anthropic_client.messages.create.side_effect = [
+        first_response,
+        second_response,
+    ]
 
     # Query
     response, sources = rag_system.query("What is machine learning?")
@@ -131,15 +137,15 @@ def test_query_prompt_formatting(rag_system, mock_anthropic_client):
 
     # Check the API was called with properly formatted prompt
     call_args = mock_anthropic_client.messages.create.call_args
-    messages = call_args.kwargs['messages']
+    messages = call_args.kwargs["messages"]
 
     # Should have a message
     assert len(messages) > 0
 
     # First message should be user message containing the query
     first_message = messages[0]
-    assert first_message['role'] == 'user'
-    assert 'machine learning' in first_message['content'].lower()
+    assert first_message["role"] == "user"
+    assert "machine learning" in first_message["content"].lower()
 
 
 def test_sources_reset_between_queries(rag_system):
@@ -165,9 +171,9 @@ def test_tool_manager_integration(rag_system):
     assert len(tool_defs) >= 2  # At least search and outline tools
 
     # Check tool names
-    tool_names = [tool['name'] for tool in tool_defs]
-    assert 'search_course_content' in tool_names
-    assert 'get_course_outline' in tool_names
+    tool_names = [tool["name"] for tool in tool_defs]
+    assert "search_course_content" in tool_names
+    assert "get_course_outline" in tool_names
 
 
 def test_get_course_analytics(rag_system, sample_course, sample_chunks):
@@ -180,20 +186,21 @@ def test_get_course_analytics(rag_system, sample_course, sample_chunks):
     analytics = rag_system.get_course_analytics()
 
     # Check structure
-    assert 'total_courses' in analytics
-    assert 'course_titles' in analytics
+    assert "total_courses" in analytics
+    assert "course_titles" in analytics
 
     # Check values
-    assert analytics['total_courses'] >= 1
-    assert isinstance(analytics['course_titles'], list)
-    assert sample_course.title in analytics['course_titles']
+    assert analytics["total_courses"] >= 1
+    assert isinstance(analytics["course_titles"], list)
+    assert sample_course.title in analytics["course_titles"]
 
 
 def test_add_course_document_integration(rag_system, tmp_path):
     """Test adding a course document (integration with document processor)"""
     # Create a temporary test file
     test_file = tmp_path / "test_course.txt"
-    test_file.write_text("""
+    test_file.write_text(
+        """
 Course Title: Test Course Integration
 Instructor: Test Instructor
 
@@ -202,7 +209,8 @@ This is lesson 1 content.
 
 Lesson 2: Advanced Topics
 This is lesson 2 content.
-    """)
+    """
+    )
 
     # Add the document
     course, chunk_count = rag_system.add_course_document(str(test_file))
@@ -213,7 +221,9 @@ This is lesson 2 content.
         assert chunk_count > 0
 
 
-def test_query_with_sequential_tool_calls(rag_system, sample_course, sample_chunks, mock_anthropic_client):
+def test_query_with_sequential_tool_calls(
+    rag_system, sample_course, sample_chunks, mock_anthropic_client
+):
     """Integration test: RAG system with sequential tool calling across 2 rounds"""
     # Add test data
     rag_system.vector_store.add_course_metadata(sample_course)
@@ -261,7 +271,7 @@ def test_query_with_sequential_tool_calls(rag_system, sample_course, sample_chun
     mock_anthropic_client.messages.create.side_effect = [
         first_response,
         second_response,
-        third_response
+        third_response,
     ]
 
     # Execute query

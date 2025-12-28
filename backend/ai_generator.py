@@ -1,9 +1,11 @@
+from typing import Any
+
 import anthropic
-from typing import List, Optional, Dict, Any
+
 
 class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
-    
+
     # Static system prompt to avoid rebuilding on each call
     SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to comprehensive search and outline tools.
 
@@ -39,22 +41,21 @@ All responses must be:
 4. **Example-supported** - Include relevant examples when they aid understanding
 Provide only the direct answer to what was asked.
 """
-    
+
     def __init__(self, api_key: str, model: str):
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
-        
+
         # Pre-build base API parameters
-        self.base_params = {
-            "model": self.model,
-            "temperature": 0,
-            "max_tokens": 800
-        }
-    
-    def generate_response(self, query: str,
-                         conversation_history: Optional[str] = None,
-                         tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+        self.base_params = {"model": self.model, "temperature": 0, "max_tokens": 800}
+
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: str | None = None,
+        tools: list | None = None,
+        tool_manager=None,
+    ) -> str:
         """
         Generate AI response with multi-round tool usage and conversation context.
 
@@ -93,7 +94,7 @@ Provide only the direct answer to what was asked.
             api_params = {
                 **self.base_params,
                 "messages": messages,
-                "system": system_content
+                "system": system_content,
             }
 
             # Add tools if available (keep tools in all rounds)
@@ -104,7 +105,7 @@ Provide only the direct answer to what was asked.
             # Make API call
             try:
                 response = self.client.messages.create(**api_params)
-            except Exception as e:
+            except Exception:
                 # Re-raise API errors to be handled by caller
                 raise
 
@@ -123,10 +124,7 @@ Provide only the direct answer to what was asked.
                 # Execute tools and prepare for next round
                 try:
                     # Add assistant's tool use response to messages
-                    messages.append({
-                        "role": "assistant",
-                        "content": response.content
-                    })
+                    messages.append({"role": "assistant", "content": response.content})
 
                     # Execute all tool calls
                     tool_results = self._execute_all_tools(response, tool_manager)
@@ -137,10 +135,7 @@ Provide only the direct answer to what was asked.
                         return "I encountered an error while searching. Please try rephrasing your question."
 
                     # Add tool results as user message
-                    messages.append({
-                        "role": "user",
-                        "content": tool_results
-                    })
+                    messages.append({"role": "user", "content": tool_results})
 
                     # Continue to next round (loop continues)
 
@@ -152,15 +147,17 @@ Provide only the direct answer to what was asked.
         final_params = {
             **self.base_params,
             "messages": messages,
-            "system": system_content
+            "system": system_content,
             # Note: no tools parameter
         }
 
         try:
             final_response = self.client.messages.create(**final_params)
             return self._extract_text_response(final_response)
-        except Exception as e:
-            return "I've gathered information but encountered an error forming a response."
+        except Exception:
+            return (
+                "I've gathered information but encountered an error forming a response."
+            )
 
     def _extract_text_response(self, response) -> str:
         """
@@ -174,15 +171,17 @@ Provide only the direct answer to what was asked.
         """
         # Look for text content blocks
         for content_block in response.content:
-            if hasattr(content_block, 'type') and content_block.type == "text":
-                return content_block.text
-            elif hasattr(content_block, 'text'):
+            if (
+                hasattr(content_block, "type")
+                and content_block.type == "text"
+                or hasattr(content_block, "text")
+            ):
                 return content_block.text
 
         # Fallback: no text found
         return "I was unable to generate a response."
 
-    def _execute_all_tools(self, response, tool_manager) -> Optional[List[Dict[str, Any]]]:
+    def _execute_all_tools(self, response, tool_manager) -> list[dict[str, Any]] | None:
         """
         Execute all tool calls from an API response.
 
@@ -200,24 +199,27 @@ Provide only the direct answer to what was asked.
                 try:
                     # Execute the tool
                     tool_result = tool_manager.execute_tool(
-                        content_block.name,
-                        **content_block.input
+                        content_block.name, **content_block.input
                     )
 
                     # Add successful result
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": content_block.id,
-                        "content": tool_result
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": tool_result,
+                        }
+                    )
 
                 except Exception as e:
                     # Add error result for this specific tool
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": content_block.id,
-                        "content": f"Error executing tool: {str(e)}",
-                        "is_error": True
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": f"Error executing tool: {str(e)}",
+                            "is_error": True,
+                        }
+                    )
 
         return tool_results if tool_results else None

@@ -1,8 +1,6 @@
 """Unit tests for CourseSearchTool.execute() method - Requirement #1"""
 
-import pytest
 from search_tools import CourseSearchTool
-from vector_store import SearchResults
 
 
 def test_execute_with_valid_query(course_search_tool):
@@ -23,8 +21,7 @@ def test_execute_with_valid_query(course_search_tool):
 def test_execute_with_course_filter(course_search_tool):
     """Test search with course name filter"""
     result = course_search_tool.execute(
-        query="supervised",
-        course_name="Machine Learning"  # Partial match should work
+        query="supervised", course_name="Machine Learning"  # Partial match should work
     )
 
     # Should return results
@@ -37,10 +34,7 @@ def test_execute_with_course_filter(course_search_tool):
 
 def test_execute_with_lesson_filter(course_search_tool):
     """Test search with lesson number filter"""
-    result = course_search_tool.execute(
-        query="neural",
-        lesson_number=3
-    )
+    result = course_search_tool.execute(query="neural", lesson_number=3)
 
     # Should return results
     assert isinstance(result, str)
@@ -52,9 +46,7 @@ def test_execute_with_lesson_filter(course_search_tool):
 def test_execute_with_both_filters(course_search_tool):
     """Test search with both course name and lesson number filters"""
     result = course_search_tool.execute(
-        query="learning",
-        course_name="Machine Learning",
-        lesson_number=2
+        query="learning", course_name="Machine Learning", lesson_number=2
     )
 
     # Should return results
@@ -67,10 +59,7 @@ def test_execute_with_both_filters(course_search_tool):
 
 def test_execute_with_invalid_course(course_search_tool):
     """Test search with non-existent course name"""
-    result = course_search_tool.execute(
-        query="test",
-        course_name="NonExistentCourse"
-    )
+    result = course_search_tool.execute(query="test", course_name="NonExistentCourse")
 
     # Should return error message
     assert isinstance(result, str)
@@ -107,7 +96,7 @@ def test_last_sources_tracking(course_search_tool):
     course_search_tool.last_sources = []
 
     # Execute search
-    result = course_search_tool.execute(query="machine learning")
+    _result = course_search_tool.execute(query="machine learning")
 
     # Check sources were tracked
     assert isinstance(course_search_tool.last_sources, list)
@@ -153,8 +142,9 @@ def test_multiple_searches_reset_sources(course_search_tool):
 
 def test_tool_definition_structure():
     """Test that get_tool_definition returns correct structure"""
-    from vector_store import VectorStore
     import tempfile
+
+    from vector_store import VectorStore
 
     with tempfile.TemporaryDirectory() as temp_dir:
         store = VectorStore(temp_dir, "all-MiniLM-L6-v2", 3)

@@ -1,7 +1,6 @@
 """Unit tests for VectorStore search functionality"""
 
-import pytest
-from vector_store import VectorStore, SearchResults
+from vector_store import SearchResults
 
 
 def test_search_returns_results(populated_vector_store):
@@ -19,8 +18,7 @@ def test_search_returns_results(populated_vector_store):
 def test_search_with_course_filter(populated_vector_store):
     """Test search with course name filter"""
     results = populated_vector_store.search(
-        query="learning",
-        course_name="Machine Learning"  # Exact match
+        query="learning", course_name="Machine Learning"  # Exact match
     )
 
     # Should return results
@@ -30,15 +28,12 @@ def test_search_with_course_filter(populated_vector_store):
     # Results should be from the correct course
     if not results.is_empty():
         for meta in results.metadata:
-            assert meta['course_title'] == "Introduction to Machine Learning"
+            assert meta["course_title"] == "Introduction to Machine Learning"
 
 
 def test_search_with_lesson_filter(populated_vector_store):
     """Test search with lesson number filter"""
-    results = populated_vector_store.search(
-        query="learning",
-        lesson_number=2
-    )
+    results = populated_vector_store.search(query="learning", lesson_number=2)
 
     # Should return results
     assert isinstance(results, SearchResults)
@@ -46,7 +41,7 @@ def test_search_with_lesson_filter(populated_vector_store):
     # Results should be from lesson 2
     if not results.is_empty():
         for meta in results.metadata:
-            assert meta['lesson_number'] == 2
+            assert meta["lesson_number"] == 2
 
 
 def test_fuzzy_course_name_matching(populated_vector_store):
@@ -69,7 +64,9 @@ def test_fuzzy_course_name_matching_with_typo(populated_vector_store):
 
 def test_course_name_resolution_fails_gracefully(populated_vector_store):
     """Test course resolution with no match returns None"""
-    resolved = populated_vector_store._resolve_course_name("NonExistentQuantumPhysicsCourse")
+    resolved = populated_vector_store._resolve_course_name(
+        "NonExistentQuantumPhysicsCourse"
+    )
 
     # Should return None for non-existent course
     # Note: Due to vector similarity, it might still return something
@@ -110,17 +107,22 @@ def test_search_results_from_chroma():
     """Test SearchResults.from_chroma factory method"""
     # Mock ChromaDB response format
     chroma_response = {
-        'documents': [['doc1', 'doc2']],
-        'metadatas': [[{'course_title': 'Test', 'lesson_number': 1}, {'course_title': 'Test', 'lesson_number': 2}]],
-        'distances': [[0.1, 0.2]]
+        "documents": [["doc1", "doc2"]],
+        "metadatas": [
+            [
+                {"course_title": "Test", "lesson_number": 1},
+                {"course_title": "Test", "lesson_number": 2},
+            ]
+        ],
+        "distances": [[0.1, 0.2]],
     }
 
     results = SearchResults.from_chroma(chroma_response)
 
     assert len(results.documents) == 2
-    assert results.documents[0] == 'doc1'
+    assert results.documents[0] == "doc1"
     assert len(results.metadata) == 2
-    assert results.metadata[0]['course_title'] == 'Test'
+    assert results.metadata[0]["course_title"] == "Test"
 
 
 def test_build_filter_with_both_params(vector_store):
@@ -184,8 +186,8 @@ def test_add_course_metadata(vector_store, sample_course):
     results = vector_store.course_catalog.get(ids=[sample_course.title])
 
     assert results is not None
-    assert len(results['ids']) == 1
-    assert results['ids'][0] == sample_course.title
+    assert len(results["ids"]) == 1
+    assert results["ids"][0] == sample_course.title
 
 
 def test_add_course_content(vector_store, sample_chunks):
@@ -196,7 +198,7 @@ def test_add_course_content(vector_store, sample_chunks):
     results = vector_store.course_content.get()
 
     assert results is not None
-    assert len(results['ids']) == len(sample_chunks)
+    assert len(results["ids"]) == len(sample_chunks)
 
 
 def test_get_lesson_link(populated_vector_store):
@@ -209,7 +211,9 @@ def test_get_lesson_link(populated_vector_store):
 
 def test_get_lesson_link_not_found(populated_vector_store):
     """Test get_lesson_link with non-existent lesson"""
-    link = populated_vector_store.get_lesson_link("Introduction to Machine Learning", 999)
+    link = populated_vector_store.get_lesson_link(
+        "Introduction to Machine Learning", 999
+    )
 
     # Should return None for non-existent lesson
     assert link is None
@@ -250,14 +254,14 @@ def test_get_course_outline(populated_vector_store):
 
     # Should return outline dict
     assert outline is not None
-    assert 'title' in outline
-    assert 'instructor' in outline
-    assert 'lessons' in outline
+    assert "title" in outline
+    assert "instructor" in outline
+    assert "lessons" in outline
 
     # Check outline details
-    assert outline['title'] == "Introduction to Machine Learning"
-    assert outline['instructor'] == "Dr. Smith"
-    assert len(outline['lessons']) == 3
+    assert outline["title"] == "Introduction to Machine Learning"
+    assert outline["instructor"] == "Dr. Smith"
+    assert len(outline["lessons"]) == 3
 
 
 def test_get_course_outline_not_found(populated_vector_store):
